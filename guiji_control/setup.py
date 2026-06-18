@@ -22,9 +22,9 @@ setup(
             'pytest',
         ],
     },
-    entry_points={
+   entry_points={
         'console_scripts': [
-            'trajectory_generator = guiji_control.trajectory_generator:main'
+            'trajectory_planner = guiji_control.trajectory_planner:main'
         ],
     },
 )
