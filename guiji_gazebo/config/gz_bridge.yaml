@@ -1,0 +1,6 @@
+# 讓 ROS 2 可以同步 Gazebo 模擬世界裡的真實物理時間
+- topic_name: /clock
+  ign_topic_name: /clock
+  ros_type_name: rosgraph_msgs/msg/Clock
+  ign_type_name: gz.msgs.Clock
+  direction: GZ_TO_ROS

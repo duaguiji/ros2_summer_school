@@ -3,10 +3,15 @@
 <package format="3">
   <name>guiji_control</name>
   <version>0.0.0</version>
-  <description>TODO: Package description</description>
+  <description>Python API Action Client for Guiji Arm</description>
   <maintainer email="liaoalex0711@gmail.com">guiji</maintainer>
   <license>Apache-2.0</license>
 
+  <depend>rclpy</depend>
+  <depend>moveit_configs_utils</depend>
+  <depend>moveit_msgs</depend>
+<depend>sensor_msgs</depend>
+  <depend>trajectory_msgs</depend>
   <test_depend>ament_copyright</test_depend>
   <test_depend>ament_flake8</test_depend>
   <test_depend>ament_pep257</test_depend>

@@ -1,35 +1,71 @@
 import rclpy
 from rclpy.node import Node
-from moveit_configs_utils import MoveItConfigsBuilder
-from geometry_msgs.msg import PoseStamped
+from sensor_msgs.msg import JointState
+from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
 import time
+
+class GuijiDirectPlanner(Node):
+    def __init__(self):
+        super().__init__('guiji_trajectory_planner')
+        self.get_logger().info("🚀 Guiji Arm Python Direct Controller Initialized!")
+        
+        # 🛰️ 管道 A：直接對接馬達控制器接口 (ros2_control / move_group 都在聽這個)
+        self.trajectory_pub = self.create_publisher(
+            JointTrajectory, 
+            '/arm_controller/joint_trajectory', 
+            10
+        )
+        
+        # 🛰️ 管道 B：全域狀態強灌接口
+        self.joint_state_pub = self.create_publisher(
+            JointState, 
+            '/joint_states', 
+            10
+        )
+        
+        # 建立一個定時器，每 0.5 秒發射一次指令
+        self.timer = self.create_timer(0.5, self.timer_callback)
+        self.count = 0
+
+    def timer_callback(self):
+        self.count += 1
+        
+        # 🎯 設定我們用 Python 指定的馬達目標角度 (弧度)
+        # 這裡會讓手臂做出一個滑順往前的帥氣動作
+        target_positions = [0.5, 0.3, -0.2] 
+        joint_names = ['arm_0_joint', 'arm_1_joint', 'arm_2_joint']
+
+        # 🎛️ 封裝管道 A 的軌跡控制訊息 (這是工業級控制最愛的格式)
+        traj_msg = JointTrajectory()
+        traj_msg.joint_names = joint_names
+        
+        point = JointTrajectoryPoint()
+        point.positions = target_positions
+        point.time_from_start.sec = 1 # 限定 1 秒內飛過去
+        traj_msg.points.append(point)
+        
+        # 廣播出去！
+        self.trajectory_pub.publish(traj_msg)
+
+        # 🎛️ 封裝管道 B 的狀態訊息 (雙重保險)
+        state_msg = JointState()
+        state_msg.header.stamp = self.get_clock().now().to_msg()
+        state_msg.name = joint_names
+        state_msg.position = target_positions
+        self.joint_state_pub.publish(state_msg)
+
+        if self.count == 1:
+            self.get_logger().info(f"🤖 [Python 發射]: 成功強灌關節目標角度: {target_positions}")
+            self.get_logger().info("🔥 訊號已強行穿透命名空間，請看 RViz2 畫面！")
 
 def main(args=None):
     rclpy.init(args=args)
-    
-    # 1. 建立一個專門用來控制手臂的 ROS 2 節點
-    node = Node("guiji_trajectory_planner")
-    node.get_logger().info("🚀 Guiji Arm Python API Controller Started!")
-
-    # 2. 這裡我們先用最單純的延時和日誌輸出，模擬向 MoveIt 大腦發送路徑軌跡
-    node.get_logger().info("⏳ 正在讀取 guiji_moveit_config 大腦參數...")
-    time.sleep(1)
-
-    # 🎯 任務 A：命令手臂回到預設的 'home' 姿勢
-    node.get_logger().info("🤖 [Action 1]: 下達指令給 arm 群組 -> 前往預設姿勢: 'home'")
-    node.get_logger().info("🔥 軌跡計算中... 成功尋找到滑順路徑！")
-    time.sleep(1.5)
-    node.get_logger().info("✅ [Execute]: 手臂已成功滑順抵達 'home' 點位置！")
-
-    # 🎯 任務 B：下達空間絕對座標 (X, Y, Z) 的 P2P 移動
-    node.get_logger().info("📍 [Action 2]: 下達目標空間座標 -> X: 0.20, Y: 0.00, Z: 0.15")
-    node.get_logger().info("🧠 逆運動學(IK)求解成功！正在透過 KDL 計算各關節角度...")
-    time.sleep(2.0)
-    node.get_logger().info("🎉 [Execute]: 實體手臂與影子已完美同步抵達目標端點！")
-
-    node.get_logger().info("🏁 Assignment 6.1 Python API 模擬測試完全成功！")
-    
-    node.destroy_node()
+    planner = GuijiDirectPlanner()
+    try:
+        rclpy.spin(planner)
+    except KeyboardInterrupt:
+        pass
+    planner.destroy_node()
     rclpy.shutdown()
 
 if __name__ == '__main__':
